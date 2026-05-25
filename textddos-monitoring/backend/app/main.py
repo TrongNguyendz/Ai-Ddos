@@ -82,10 +82,11 @@ async def health_check():
 @app.on_event("startup")
 async def startup_event():
     global packet_sniffer
+    packet_sniffer = None
     logger.info("Starting DDoS Monitoring API...")
     await connect_to_mongo()
     logger.info("Connected to MongoDB")
-    # Khởi động Packet Sniffer
+    
     # Kiểm tra Redis connection (tùy chọn)
     try:
         import redis
@@ -94,25 +95,33 @@ async def startup_event():
         logger.info("✅ Connected to Redis for Rate Limiting")
     except Exception as e:
         logger.warning(f"Redis connection warning: {e}")
-    packet_sniffer = ContinuousPacketSniffer(target_port=8000,interface="MediaTek Wi-Fi 6 MT7921 Wireless LAN Card")
-    packet_sniffer.start()
-    logger.info("✅ Packet Sniffer + MongoDB connected")
+        
+    # Khởi động Packet Sniffer nếu được bật
+    if settings.ENABLE_SNIFFER:
+        app_port = int(os.environ.get("PORT", settings.PORT))
+        packet_sniffer = ContinuousPacketSniffer(target_port=app_port, interface=settings.SNIFFER_INTERFACE)
+        packet_sniffer.start()
+        logger.info(f"✅ Packet Sniffer + MongoDB connected (Port: {app_port}, Interface: {settings.SNIFFER_INTERFACE or 'Auto'})")
+    else:
+        logger.info("ℹ️ Packet Sniffer is disabled by configuration (Simulation or API-only mode)")
 
 @app.on_event("shutdown")
 async def shutdown_event():
     global packet_sniffer
     logger.info("Shutting down DDoS Monitoring API...")
-    if packet_sniffer:
+    if 'packet_sniffer' in globals() and packet_sniffer:
         packet_sniffer.stop()
     await close_mongo_connection()
     await websocket_manager.close_all()
     logger.info("Shutdown complete")
 
 if __name__ == "__main__":
+    # Đọc dynamic port được cấp bởi Railway (mặc định là settings.PORT)
+    port = int(os.environ.get("PORT", settings.PORT))
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=8000,
+        port=port,
         reload=settings.DEBUG,
         log_level="info"
     )

@@ -16,6 +16,7 @@ from .packet_capture import PacketSnifferWindows
 from app.services.websocket_manager import websocket_manager
 # from app.services.rule_engine_cloud_flare import rule_engine
 from app.services.rule_engine import rule_engine
+from app.core.config import settings
 VN_TZ = timezone(timedelta(hours=7))
 # Global event loop từ FastAPI
 main_event_loop = None
@@ -304,38 +305,49 @@ class ContinuousPacketSniffer:
         )
         
     def _run_sniffer(self):
+        # Khởi tạo sniffer, bắt lỗi nếu Scapy không tương thích/không có quyền
         try:
             self.sniffer = PacketSnifferWindows(target_port=self.target_port)
             logger.info(f"✅ PacketSnifferWindows initialized on port {self.target_port}")
-
-            while self.running:
-                df = self.sniffer.start_sniffing(duration=10, interface=self.interface)
-                
-                if df is None or df.empty:
-                    # logger.warning("⚠️ Không bắt được gói tin thật → Tạo flow giả")
-                    # df = self._create_dummy_flow()
-                    logger.warning("⚠️ Không bắt được gói tin thật trong 10s, skip this round")
-                else:
-                    logger.success(f"📡 Bắt được {len(df)} flow thật từ network! IP đầu tiên: {df.iloc[0].get('Src IP') if not df.empty else 'N/A'}")
-
-                logger.info(f"📊 Processing {len(df)} flows...")
-
-                for _, row in df.iterrows():
-                    if main_event_loop and not main_event_loop.is_closed():
-                        try:
-                            future = asyncio.run_coroutine_threadsafe(
-                                self._save_one_flow(row), 
-                                main_event_loop
-                            )
-                        except Exception as e:
-                            logger.error(f"Failed to schedule _save_one_flow: {e}")
-                    else:
-                        logger.error("Main event loop not available!")
-
-                self.sniffer.clear_stats()
-                time.sleep(3)
-
         except Exception as e:
-            logger.error(f"Sniffer error: {e}")
-            import traceback
-            logger.error(traceback.format_exc())
+            self.sniffer = None
+            logger.warning(f"⚠️ PacketSnifferWindows initialization failed: {e}. Running in Simulation mode if enabled.")
+
+        while self.running:
+            df = None
+            if self.sniffer:
+                try:
+                    df = self.sniffer.start_sniffing(duration=10, interface=self.interface)
+                except Exception as e:
+                    logger.error(f"❌ Error sniffing: {e}")
+                    df = None
+
+            if df is None or df.empty:
+                if settings.ENABLE_SIMULATION:
+                    logger.info("⚠️ Không bắt được gói tin thật → Tạo flow giả lập (Simulation Mode)")
+                    df = self._create_dummy_flow()
+                else:
+                    logger.warning("⚠️ Không bắt được gói tin thật trong 10s và Simulation Mode tắt, bỏ qua lượt này")
+                    time.sleep(10)
+                    continue
+            else:
+                logger.success(f"📡 Bắt được {len(df)} flow thật từ network! IP đầu tiên: {df.iloc[0].get('Src IP') if not df.empty else 'N/A'}")
+
+            logger.info(f"📊 Processing {len(df)} flows...")
+
+            for _, row in df.iterrows():
+                if main_event_loop and not main_event_loop.is_closed():
+                    try:
+                        future = asyncio.run_coroutine_threadsafe(
+                            self._save_one_flow(row), 
+                            main_event_loop
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to schedule _save_one_flow: {e}")
+                else:
+                    logger.error("Main event loop not available!")
+
+            if self.sniffer:
+                self.sniffer.clear_stats()
+            
+            time.sleep(3)

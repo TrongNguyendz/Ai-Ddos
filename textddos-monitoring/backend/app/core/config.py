@@ -1,5 +1,5 @@
 from pydantic_settings import BaseSettings
-from typing import List
+from typing import List, Optional
 import os
 from pathlib import Path
 
@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "TextDDOS Monitoring API"
     VERSION: str = "1.0.0"
     DEBUG: bool = True
+    PORT: int = 8000
 
     # MongoDB
     MONGODB_URL: str = "mongodb://localhost:27017"
@@ -42,11 +43,21 @@ class Settings(BaseSettings):
     ALERT_MEDIUM_CONFIDENCE: float = 0.7
     ALERT_LOW_CONFIDENCE: float = 0.5
     
-    CLOUDFLARE_API_TOKEN: str = "cfut_W4pYhc4ds7qOraCOjFtyCgmSvNWMkDvNt4dKPF2o6763c666"
-    CLOUDFLARE_ACCOUNT_ID: str = "1e01e4800cf217d21be33e13d3446600"
-    CLOUDFLARE_ZONE_ID: str = "your_zone_id_optional"
+    CLOUDFLARE_API_TOKEN: str = ""
+    CLOUDFLARE_ACCOUNT_ID: str = ""
+    CLOUDFLARE_ZONE_ID: str = ""
     
     REDIS_URL: str = "redis://localhost:6379/0"   # Hoặc redis://user:pass@host:port/0
+
+    # Telegram Alert Configuration
+    TELEGRAM_TOKEN: str = ""
+    TELEGRAM_CHAT_ID: str = ""
+
+    # Packet Sniffer & Traffic Simulation Settings
+    ENABLE_SNIFFER: bool = True
+    SNIFFER_INTERFACE: Optional[str] = None
+    ENABLE_SIMULATION: bool = True
+
     class Config:
         env_file = ".env"
         case_sensitive = True

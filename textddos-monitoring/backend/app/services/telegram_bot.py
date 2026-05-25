@@ -1,15 +1,12 @@
 import httpx
-from dotenv import load_dotenv
+from app.core.config import settings
 
-
-load_dotenv()
-
-# === SỬA Ở ĐÂY ===
-TOKEN = "8546638271:AAH6qYLNQYdgMpO28YiKVaIyWqi80BDgiB4"
-CHAT_ID = "7995482522"
+# Đọc cấu hình từ settings (nơi quản lý biến môi trường)
+TOKEN = settings.TELEGRAM_TOKEN
+CHAT_ID = settings.TELEGRAM_CHAT_ID
 
 if not TOKEN or not CHAT_ID:
-    print("❌ LỖI: TELEGRAM_TOKEN hoặc TELEGRAM_CHAT_ID chưa được set trong .env")
+    print("❌ LỖI: TELEGRAM_TOKEN hoặc TELEGRAM_CHAT_ID chưa được set")
 
 async def send_telegram_alert(message: str, parse_mode="HTML"):
     if not TOKEN or not CHAT_ID:
