@@ -325,7 +325,7 @@ class ContinuousPacketSniffer:
             if df is None or df.empty:
                 if settings.ENABLE_SIMULATION:
                     logger.info("⚠️ Không bắt được gói tin thật → Tạo flow giả lập (Simulation Mode)")
-                    df = self._create_dummy_flow()
+                    # df = self._create_dummy_flow()
                 else:
                     logger.warning("⚠️ Không bắt được gói tin thật trong 10s và Simulation Mode tắt, bỏ qua lượt này")
                     time.sleep(10)
