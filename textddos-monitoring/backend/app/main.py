@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 import uvicorn
 from loguru import logger
 from slowapi.middleware import SlowAPIMiddleware
-from app.core.config import settings
+
 from app.core.database import connect_to_mongo, close_mongo_connection
 from app.routers import flows, dashboard, alerts, rules
 from app.services.websocket_manager import websocket_manager
@@ -15,7 +15,13 @@ from slowapi.errors import RateLimitExceeded
 # Import limiter
 # Import limiter
 from app.core.rate_limiter import limiter, _rate_limit_exceeded_handler
-
+import sys
+import os
+from pathlib import Path
+# Thêm đường dẫn để Python tìm thấy module
+BASE_DIR = Path(__file__).resolve().parent.parent
+sys.path.append(str(BASE_DIR))
+from app.core.config import settings
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.VERSION,
