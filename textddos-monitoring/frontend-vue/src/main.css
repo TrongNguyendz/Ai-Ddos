@@ -1,0 +1,84 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  @apply transition-colors duration-200;
+}
+
+body {
+  @apply bg-slate-900 text-slate-100;
+}
+
+.btn {
+  @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 cursor-pointer;
+}
+
+.btn-primary {
+  @apply bg-blue-600 hover:bg-blue-700 text-white;
+}
+
+.btn-danger {
+  @apply bg-red-600 hover:bg-red-700 text-white;
+}
+
+.btn-success {
+  @apply bg-green-600 hover:bg-green-700 text-white;
+}
+
+.btn-ghost {
+  @apply bg-slate-700 hover:bg-slate-600 text-slate-100;
+}
+
+.card {
+  @apply bg-slate-800 rounded-lg p-6 shadow-lg border border-slate-700;
+}
+
+.card-hover {
+  @apply card hover:shadow-xl hover:border-slate-600 transition-all;
+}
+
+.input-field {
+  @apply w-full px-4 py-2 rounded-lg bg-slate-700 border border-slate-600 text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+}
+
+.badge {
+  @apply inline-block px-3 py-1 rounded-full text-sm font-medium;
+}
+
+.badge-success {
+  @apply badge bg-green-900 text-green-200;
+}
+
+.badge-danger {
+  @apply badge bg-red-900 text-red-200;
+}
+
+.badge-warning {
+  @apply badge bg-yellow-900 text-yellow-200;
+}
+
+.badge-info {
+  @apply badge bg-blue-900 text-blue-200;
+}
+
+.highlight-danger {
+  @apply bg-red-900/30 border-l-4 border-red-500;
+}
+
+.highlight-success {
+  @apply bg-green-900/30 border-l-4 border-green-500;
+}
+
+.animate-pulse-custom {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
