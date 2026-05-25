@@ -6,7 +6,9 @@ from pathlib import Path
 from loguru import logger
 
 # ====================== CẤU HÌNH ======================
-MODEL_PATH = Path("D:\\AI-DDOS\\textddos-monitoring\\backend\\models\\")  # Thay bằng đường dẫn thực tế của bạn
+# Dùng đường dẫn động tương đối với file này (hoạt động cả Windows lẫn Linux)
+BASE_DIR = Path(__file__).resolve().parent.parent.parent  # → /app
+MODEL_PATH = BASE_DIR / "models"
 RF_MODEL_PATH = MODEL_PATH / "random_forest_model.pkl"
 SCALER_PATH = MODEL_PATH / "scaler_fs.pkl"   # hoặc scaler.pkl
 

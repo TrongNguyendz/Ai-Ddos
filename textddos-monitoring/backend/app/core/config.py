@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     WS_PING_INTERVAL: int = 30
 
     # AI Model
-    MODEL_PATH: str = "./models/ddos_model.pkl"
+    MODEL_PATH: str = "models/random_forest_model.pkl"
     MODEL_THRESHOLD: float = 0.8
 
     # Security
