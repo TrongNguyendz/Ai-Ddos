@@ -20,3 +20,4 @@ joblib==1.3.2
 typing-extensions==4.8.0
 slowapi>=0.1.8
 cloudflare
+sympy>=1.12
