@@ -6,9 +6,9 @@ from datetime import datetime
 from app.schemas.flow import AlertCreate, AlertResponse, AlertUpdate
 from app.core.database import get_alerts_collection
 from app.services.websocket_manager import websocket_manager
-
+from app.services.ip_blocker import IPBlocker
 router = APIRouter()
-
+ip_blocker = IPBlocker()
 @router.post("/alerts", response_model=AlertResponse)
 async def create_alert(
     alert: AlertCreate,
@@ -43,18 +43,27 @@ async def get_alerts(
     alerts_collection: AsyncIOMotorCollection = Depends(get_alerts_collection)
 ):
     """Get alerts with filtering"""
+
     query = {}
 
     if status:
         query["status"] = status
+
     if severity:
         query["severity"] = severity
 
-    alerts = await alerts_collection.find(query)\
-        .sort("timestamp", -1)\
-        .skip(skip)\
-        .limit(limit)\
+    alerts = await (
+        alerts_collection.find(query)
+        .sort("timestamp", -1)
+        .skip(skip)
+        .limit(limit)
         .to_list(length=None)
+    )
+
+    # Chuyển ObjectId -> string
+    for alert in alerts:
+        if "_id" in alert:
+            alert["_id"] = str(alert["_id"])
 
     return [AlertResponse(**alert) for alert in alerts]
 
@@ -63,11 +72,15 @@ async def get_alert(
     alert_id: str,
     alerts_collection: AsyncIOMotorCollection = Depends(get_alerts_collection)
 ):
-    """Get a specific alert"""
     from bson import ObjectId
+    
     alert = await alerts_collection.find_one({"_id": ObjectId(alert_id)})
     if not alert:
         raise HTTPException(status_code=404, detail="Alert not found")
+
+    # Convert _id sang id
+    if alert and "_id" in alert:
+        alert["id"] = str(alert.pop("_id"))  # pop và chuyển thành string
 
     return AlertResponse(**alert)
 
@@ -163,3 +176,55 @@ async def process_alert_actions(alert_data: dict):
     # TODO: Implement alert action processing
     # This could send notifications, update firewall rules, etc.
     pass
+@router.post("/alerts/{alert_id}/toggle-block")
+async def toggle_block_alert(
+    alert_id: str,
+    alerts_collection: AsyncIOMotorCollection = Depends(get_alerts_collection)
+):
+    """Toggle is_blocked status (true <-> false)"""
+    from bson import ObjectId
+
+    alert = await alerts_collection.find_one({"_id": ObjectId(alert_id)})
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    status = alert.get("is_blocked", False)
+    new_status = not status
+    if status == False:
+        # Thực hiện block IP
+        try:
+            ip_blocker.block_ip(alert["src_ip"], reason=f"human block")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Không thể block IP: {e}")
+    else:
+        # Thực hiện unblock IP
+        try:
+            ip_blocker.unblock_ip(alert["src_ip"])
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Không thể unblock IP: {e}")
+    result = await alerts_collection.update_one(
+        {"_id": ObjectId(alert_id)},
+        {
+            "$set": {
+                "is_blocked": new_status,
+                "status": "acknowledged" if new_status else "new"
+            }
+        }
+    )
+
+    if result.modified_count == 0:
+        raise HTTPException(status_code=400, detail="Không thể cập nhật alert")
+
+    updated_alert = await alerts_collection.find_one(
+        {"_id": ObjectId(alert_id)}
+    )
+
+    updated_alert["_id"] = str(updated_alert["_id"])
+
+    await websocket_manager.broadcast_alert(updated_alert)
+
+    return {
+        "message": f"Đã {'chặn' if new_status else 'bỏ chặn'} IP thành công",
+        "status": "ok",
+        "is_blocked": new_status,
+        "alert": AlertResponse(**updated_alert)
+    }

@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 from datetime import datetime
-
+from bson import ObjectId
 # Flow Schemas
 class FlowBase(BaseModel):
     switch: str
@@ -57,12 +57,35 @@ class AlertUpdate(BaseModel):
     status: Optional[str]
     actions_taken: Optional[List[str]]
 
-class AlertResponse(AlertBase):
-    id: str
+from typing import Optional
+
+from pydantic import BaseModel, Field
+from datetime import datetime
+from typing import Optional
+
+class AlertResponse(BaseModel):
+    id: Optional[str] = Field(None, alias="_id")
+    
+    title: str
+    description: str
+    severity: str
+
+    src_ip: str
+    pktrate: float
+    confidence: float
+
     timestamp: datetime
-    status: str
-    rule_triggered: Optional[str]
-    actions_taken: Optional[List[str]] = []
+
+    rule_id: Optional[str] = None
+
+    is_ai: bool = False
+    is_blocked: bool = False
+
+    class Config:
+        populate_by_name = True  # Quan trọng: cho phép dùng alias
+        json_encoders = {
+            ObjectId: str  # Chuyển ObjectId thành string khi serialize
+        }
 
 # Rule Schemas
 class RuleBase(BaseModel):

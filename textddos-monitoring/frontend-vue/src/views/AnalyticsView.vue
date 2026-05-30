@@ -2,286 +2,178 @@
   <div>
     <div class="space-y-6">
       <div>
-        <h2 class="text-2xl font-bold text-white mb-2">Quản Lý Danh Sách Đen</h2>
-        <p class="text-slate-400">Quản lý các IP bị chặn (Blacklist)</p>
+        <h2 class="text-2xl font-bold text-white mb-2">Quản Lý Alerts</h2>
+        <p class="text-slate-400">Danh sách các cảnh báo bảo mật</p>
       </div>
 
-    <!-- Header Actions -->
-    <div class="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
-      <div class="flex-1 max-w-md">
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="Tìm kiếm IP hoặc lý do..."
-          class="input-field w-full"
-          @keyup.enter="filterBlacklist"
-        />
-      </div>
-
-      <div class="flex gap-3">
-        <button @click="showAddModal = true" class="btn btn-success flex items-center gap-2">
-          <span>+</span> Thêm IP vào Blacklist
-        </button>
-        <button @click="exportBlacklist" class="btn btn-ghost flex items-center gap-2">
-          📤 Export
-        </button>
-      </div>
-    </div>
-
-    <!-- Stats -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div class="card p-4">
-        <div class="text-slate-400 text-sm">Tổng IP bị chặn</div>
-        <div class="text-3xl font-bold text-white mt-1">{{ blacklist.length }}</div>
-      </div>
-      <div class="card p-4">
-        <div class="text-slate-400 text-sm">Chặn thủ công</div>
-        <div class="text-3xl font-bold text-blue-400 mt-1">{{ manualBlocked }}</div>
-      </div>
-      <div class="card p-4">
-        <div class="text-slate-400 text-sm">Chặn tự động</div>
-        <div class="text-3xl font-bold text-red-400 mt-1">{{ autoBlocked }}</div>
-      </div>
-    </div>
-
-    <!-- Table -->
-    <div class="card overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead class="bg-slate-700 sticky top-0">
-            <tr>
-              <th class="px-4 py-3 text-left text-slate-300">IP Address</th>
-              <th class="px-4 py-3 text-left text-slate-300">Thời gian chặn</th>
-              <th class="px-4 py-3 text-left text-slate-300">Lý do</th>
-              <th class="px-4 py-3 text-left text-slate-300">Loại</th>
-              <th class="px-4 py-3 text-right text-slate-300">Expiry</th>
-              <th class="px-4 py-3 text-center text-slate-300">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="filteredBlacklist.length === 0" class="text-center py-12">
-              <td colspan="6" class="text-slate-400">Không tìm thấy IP nào trong danh sách đen</td>
-            </tr>
-            <tr
-              v-for="item in filteredBlacklist"
-              :key="item.ip"
-              class="border-b border-slate-700 hover:bg-slate-700/50 transition-colors"
-            >
-              <td class="px-4 py-4 font-mono text-orange-400">{{ item.ip }}</td>
-              <td class="px-4 py-4 text-slate-400 text-xs">{{ formatDate(item.blockedAt) }}</td>
-              <td class="px-4 py-4">
-                <span class="text-slate-300">{{ item.reason }}</span>
-              </td>
-              <td class="px-4 py-4">
-                <span
-                  :class="item.type === 'manual' ? 'badge-blue' : 'badge-danger'"
-                  class="badge"
-                >
-                  {{ item.type === 'manual' ? 'Thủ công' : 'Tự động' }}
-                </span>
-              </td>
-              <td class="px-4 py-4 text-right text-sm">
-                <span v-if="item.expiry" class="text-amber-400">
-                  {{ formatDate(item.expiry) }}
-                </span>
-                <span v-else class="text-emerald-400">Vĩnh viễn</span>
-              </td>
-              <td class="px-4 py-4 text-center">
-                <button
-                  @click="unblockIP(item.ip)"
-                  class="px-3 py-1 text-red-400 hover:text-red-300 hover:bg-red-900/30 rounded-md transition-colors text-xs font-medium flex items-center gap-1 mx-auto"
-                >
-                  🗑️ Gỡ chặn
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Pagination -->
-      <div class="px-4 py-4 border-t border-slate-700 flex items-center justify-between text-sm">
-        <div class="text-slate-400">
-          Hiển thị {{ filteredBlacklist.length }} / {{ blacklist.length }} IP
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Add IP Modal -->
-  <div v-if="showAddModal" class="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-    <div class="bg-slate-800 border border-slate-700 rounded-xl w-full max-w-md p-6">
-      <h3 class="text-xl font-semibold text-white mb-4">Thêm IP vào Blacklist</h3>
-      
-      <div class="space-y-4">
-        <div>
-          <label class="block text-slate-400 text-sm mb-1">Địa chỉ IP</label>
-          <input v-model="newBlock.ip" type="text" placeholder="192.168.1.100" class="input-field w-full" />
+      <!-- Header Actions -->
+      <div class="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
+        <div class="flex-1 max-w-md">
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Tìm kiếm IP, rule hoặc mô tả..."
+            class="input-field w-full"
+            @keyup.enter="fetchAlerts"
+          />
         </div>
 
-        <div>
-          <label class="block text-slate-400 text-sm mb-1">Lý do</label>
-          <input v-model="newBlock.reason" type="text" placeholder="Tấn công DDoS, Scan port..." class="input-field w-full" />
-        </div>
-
-        <div>
-          <label class="block text-slate-400 text-sm mb-1">Thời hạn</label>
-          <select v-model="newBlock.duration" class="input-field w-full">
-            <option value="permanent">Vĩnh viễn</option>
-            <option value="1h">1 giờ</option>
-            <option value="6h">6 giờ</option>
-            <option value="24h">24 giờ</option>
-            <option value="7d">7 ngày</option>
-          </select>
+        <div class="flex gap-3">
+          <button @click="fetchAlerts" class="btn btn-ghost flex items-center gap-2">
+            🔄 Làm mới
+          </button>
         </div>
       </div>
 
-      <div class="flex gap-3 mt-6">
-        <button @click="addToBlacklist" class="btn btn-success flex-1">Xác nhận chặn</button>
-        <button @click="showAddModal = false" class="btn btn-ghost flex-1">Hủy</button>
+      <!-- Stats -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="card p-4">
+          <div class="text-slate-400 text-sm">Tổng Alerts</div>
+          <div class="text-3xl font-bold text-white mt-1">{{ alerts.length }}</div>
+        </div>
+        <div class="card p-4">
+          <div class="text-slate-400 text-sm">AI Detection</div>
+          <div class="text-3xl font-bold text-purple-400 mt-1">{{ aiAlerts }}</div>
+        </div>
+        <div class="card p-4">
+          <div class="text-slate-400 text-sm">Đã Block</div>
+          <div class="text-3xl font-bold text-red-400 mt-1">{{ blockedAlerts }}</div>
+        </div>
+        <div class="card p-4">
+          <div class="text-slate-400 text-sm">Severity High</div>
+          <div class="text-3xl font-bold text-orange-400 mt-1">{{ highSeverity }}</div>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="card overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-700 sticky top-0">
+              <tr>
+                <th class="px-4 py-3 text-left text-slate-300">Timestamp</th>
+                <th class="px-4 py-3 text-left text-slate-300">Source IP</th>
+                <th class="px-4 py-3 text-left text-slate-300">Title</th>
+                <th class="px-4 py-3 text-left text-slate-300">Severity</th>
+                <th class="px-4 py-3 text-left text-slate-300">Pktrate</th>
+                <th class="px-4 py-3 text-left text-slate-300">Confidence</th>
+                <th class="px-4 py-3 text-center text-slate-300">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="loading" class="text-center py-12">
+                <td colspan="7" class="text-slate-400">Đang tải dữ liệu...</td>
+              </tr>
+              <tr v-else-if="filteredAlerts.length === 0" class="text-center py-12">
+                <td colspan="7" class="text-slate-400">Không tìm thấy alert nào</td>
+              </tr>
+              <tr
+                v-for="alert in filteredAlerts"
+                :key="alert.id || alert._id || alert.timestamp + alert.src_ip"
+                class="border-b border-slate-700 hover:bg-slate-700/50 transition-colors"
+              >
+                <td class="px-4 py-4 text-slate-400 text-xs">{{ formatDate(alert.timestamp) }}</td>
+                <td class="px-4 py-4 font-mono text-orange-400">{{ alert.src_ip }}</td>
+                <td class="px-4 py-4 text-slate-300">{{ alert.title }}</td>
+                <td class="px-4 py-4">
+                  <span :class="getSeverityClass(alert.severity)" class="badge">
+                    {{ alert.severity?.toUpperCase() }}
+                  </span>
+                </td>
+                <td class="px-4 py-4 text-slate-300">{{ alert.pktrate?.toFixed(2) }}</td>
+                <td class="px-4 py-4 text-slate-300">{{ (alert.confidence * 100).toFixed(1) }}%</td>
+                <td class="px-4 py-4 text-center">
+                  <button
+                    @click="handleToggleBlock(alert)"
+                    :class="alert.is_blocked 
+                      ? 'bg-emerald-600 hover:bg-emerald-700' 
+                      : 'bg-red-600 hover:bg-red-700'"
+                    class="px-5 py-1.5 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1 mx-auto"
+                  >
+                    {{ alert.is_blocked ? '✅ Bỏ chặn' : '🚫 Chặn IP' }}
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
-  </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useAlertStore } from '../stores'
+import { getAlerts, toggleBlock } from '../composables/alerts'
 
-const alertStore = useAlertStore()
-
-const blacklist = ref([
-  {
-    ip: '45.76.123.45',
-    blockedAt: '2026-05-17T10:23:00',
-    reason: 'Phát hiện tấn công SYN Flood',
-    type: 'auto',
-    expiry: '2026-05-18T10:23:00'
-  },
-  {
-    ip: '103.214.56.78',
-    blockedAt: '2026-05-16T22:15:00',
-    reason: 'Quét port hàng loạt',
-    type: 'auto',
-    expiry: null
-  },
-  {
-    ip: '185.220.101.55',
-    blockedAt: '2026-05-17T08:45:00',
-    reason: 'Manual block từ admin',
-    type: 'manual',
-    expiry: '2026-05-24T08:45:00'
-  },
-  {
-    ip: '91.234.67.89',
-    blockedAt: '2026-05-15T14:30:00',
-    reason: 'Brute force SSH',
-    type: 'auto',
-    expiry: null
-  }
-])
-
+const alerts = ref([])
 const searchQuery = ref('')
-const showAddModal = ref(false)
-const newBlock = ref({
-  ip: '',
-  reason: '',
-  duration: 'permanent'
-})
+const loading = ref(false)
 
 // Computed
-const filteredBlacklist = computed(() => {
-  if (!searchQuery.value) return blacklist.value
-  
+const filteredAlerts = computed(() => {
+  if (!searchQuery.value) return alerts.value
   const q = searchQuery.value.toLowerCase()
-  return blacklist.value.filter(item =>
-    item.ip.toLowerCase().includes(q) ||
-    item.reason.toLowerCase().includes(q)
+  return alerts.value.filter(item =>
+    item.src_ip?.toLowerCase().includes(q) ||
+    item.title?.toLowerCase().includes(q) ||
+    item.description?.toLowerCase().includes(q)
   )
 })
 
-const manualBlocked = computed(() => blacklist.value.filter(i => i.type === 'manual').length)
-const autoBlocked = computed(() => blacklist.value.filter(i => i.type === 'auto').length)
+const aiAlerts = computed(() => alerts.value.filter(a => a.is_ai).length)
+const blockedAlerts = computed(() => alerts.value.filter(a => a.is_blocked).length)
+const highSeverity = computed(() => alerts.value.filter(a => a.severity === 'high').length)
 
 // Methods
 const formatDate = (dateStr) => {
   if (!dateStr) return '—'
   return new Date(dateStr).toLocaleString('vi-VN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit'
   })
 }
 
-const addToBlacklist = () => {
-  if (!newBlock.value.ip) {
-    alert('Vui lòng nhập địa chỉ IP!')
+const getSeverityClass = (severity) => {
+  if (severity === 'high') return 'bg-red-500/20 text-red-400'
+  if (severity === 'medium') return 'bg-yellow-500/20 text-yellow-400'
+  return 'bg-blue-500/20 text-blue-400'
+}
+
+const fetchAlerts = async () => {
+  loading.value = true
+  try {
+    const data = await getAlerts()
+    alerts.value = Array.isArray(data) ? data : []
+  } catch (error) {
+    console.error('Lỗi fetch alerts:', error)
+    window.alert('Không thể tải danh sách alerts!')
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleToggleBlock = async (alert) => {
+  const alertId = alert.id || alert._id
+  if (!alertId) {
+    window.alert('Không tìm thấy ID của alert!')
     return
   }
 
-  const expiry = newBlock.value.duration === 'permanent' ? null : 
-    new Date(Date.now() + getDurationMs(newBlock.value.duration)).toISOString()
+  const action = alert.is_blocked ? 'bỏ chặn' : 'chặn'
+  if (!confirm(`Bạn có chắc muốn ${action} IP ${alert.src_ip}?`)) return
 
-  blacklist.value.unshift({
-    ip: newBlock.value.ip,
-    blockedAt: new Date().toISOString(),
-    reason: newBlock.value.reason || 'Chặn thủ công bởi admin',
-    type: 'manual',
-    expiry
-  })
-
-  alertStore.addNotification({
-    type: 'success',
-    message: `Đã chặn IP ${newBlock.value.ip}`
-  })
-
-  // Reset form
-  newBlock.value = { ip: '', reason: '', duration: 'permanent' }
-  showAddModal.value = false
-}
-
-const getDurationMs = (duration) => {
-  const map = {
-    '1h': 3600000,
-    '6h': 21600000,
-    '24h': 86400000,
-    '7d': 604800000
-  }
-  return map[duration] || 0
-}
-
-const unblockIP = (ip) => {
-  if (confirm(`Bạn có chắc muốn gỡ chặn IP ${ip}?`)) {
-    blacklist.value = blacklist.value.filter(item => item.ip !== ip)
-    alertStore.addNotification({
-      type: 'success',
-      message: `Đã gỡ chặn IP ${ip}`
-    })
+  try {
+    const result = await toggleBlock(alertId)
+    window.alert(result.message || `Đã ${action} IP thành công`)
+    await fetchAlerts() // Refresh danh sách
+  } catch (error) {
+    console.error(error)
+    window.alert('Thao tác thất bại. Vui lòng thử lại!')
   }
 }
 
-const exportBlacklist = () => {
-  const dataStr = JSON.stringify(blacklist.value, null, 2)
-  const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr)
-  
-  const exportFileDefaultName = `blacklist_${new Date().toISOString().slice(0,10)}.json`
-  const linkElement = document.createElement('a')
-  linkElement.setAttribute('href', dataUri)
-  linkElement.setAttribute('download', exportFileDefaultName)
-  linkElement.click()
-}
-
-// Search
-const filterBlacklist = () => {
-  // Already handled by computed
-}
-
-onMounted(() => {
-  console.log('🛡️ BlacklistView loaded')
-})
+onMounted(fetchAlerts)
 </script>
 
 <style scoped>
@@ -291,6 +183,4 @@ onMounted(() => {
 .badge {
   @apply px-3 py-1 rounded-full text-xs font-medium;
 }
-.badge-blue { @apply bg-blue-500/20 text-blue-400; }
-.badge-danger { @apply bg-red-500/20 text-red-400; }
 </style>

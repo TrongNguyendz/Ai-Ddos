@@ -1,11 +1,11 @@
 from fastapi import APIRouter, HTTPException, Depends
-from typing import List
+from typing import List, Optional
 from motor.motor_asyncio import AsyncIOMotorCollection
 from datetime import datetime
 from bson import ObjectId
 
 from app.schemas.rule import RuleCreate, RuleResponse, RuleUpdate
-from app.core.database import get_rules_collection
+from app.core.database import get_rule_history_collection, get_rules_collection
 from app.services.rule_engine_cloud_flare import evaluate_rules
 
 router = APIRouter()
@@ -166,15 +166,57 @@ async def evaluate_all_rules(
         "alerts_triggered": len(results)
     }
 
+from typing import List, Optional
+from motor.motor_asyncio import AsyncIOMotorCollection
+# ... các import khác giữ nguyên
 
+# ==================== HELPER FOR HISTORY ====================
+def convert_history_to_response(history_dict: dict):
+    """Convert MongoDB history document to response"""
+    if not history_dict:
+        return None
+    if "_id" in history_dict:
+        history_dict["id"] = str(history_dict.pop("_id"))
+    return history_dict
+
+
+# ==================== 1. GET ALL HISTORY (PHẢI ĐẶT TRƯỚC) ====================
+@router.get("/rules/all/history")
+async def get_all_rules_history(
+    skip: int = 0,
+    limit: int = 20,
+    history_collection: AsyncIOMotorCollection = Depends(get_rule_history_collection)
+):
+    """Lấy toàn bộ lịch sử rules - phiên bản đơn giản"""
+    
+    history = await history_collection.find({})\
+        .sort("timestamp", -1)\
+        .skip(skip)\
+        .limit(limit)\
+        .to_list(length=None)
+
+    return {
+        "total": await history_collection.count_documents({}),
+        "skip": skip,
+        "limit": limit,
+        "history": [convert_history_to_response(h) for h in history]
+    }
+# ==================== 2. GET HISTORY BY RULE ID ====================
 @router.get("/rules/history/{rule_id}")
 async def get_rule_history(
     rule_id: str,
     skip: int = 0,
     limit: int = 20,
-    rules_collection: AsyncIOMotorCollection = Depends(get_rules_collection)
+    rules_collection: AsyncIOMotorCollection = Depends(get_rules_collection),
+    history_collection: AsyncIOMotorCollection = Depends(get_rule_history_collection)
 ):
-    """Get rule trigger history"""
+    """Lấy lịch sử theo một rule cụ thể"""
+    if len(rule_id) != 24:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Invalid rule ID format. Must be 24 hex chars. Got: {rule_id}"
+        )
+    
     try:
         obj_id = ObjectId(rule_id)
     except:
@@ -184,10 +226,16 @@ async def get_rule_history(
     if not rule:
         raise HTTPException(status_code=404, detail="Rule not found")
 
+    history = await history_collection.find({"rule_id": rule_id})\
+        .sort("timestamp", -1)\
+        .skip(skip)\
+        .limit(limit)\
+        .to_list(length=None)
+
     return {
         "rule_id": rule_id,
-        "rule_name": rule.get("name"),
+        "rule_name": rule.get("name", "Unknown"),
         "triggered_count": rule.get("triggered_count", 0),
         "last_triggered": rule.get("last_triggered"),
-        "history": []  # TODO: Implement actual history tracking
+        "history": [convert_history_to_response(h) for h in history]
     }

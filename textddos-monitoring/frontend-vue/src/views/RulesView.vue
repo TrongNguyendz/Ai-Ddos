@@ -97,7 +97,7 @@
                     <span v-if="rule.conditions?.protocol">Protocol: <span class="text-blue-400 font-mono">{{ rule.conditions?.protocol }}</span></span>
                     <span>pktrate > <span class="text-cyan-400">{{ rule.conditions?.pktrate_threshold || 'N/A' }}</span></span>
                     <span>Action: <span class="badge" :class="getActionBadge(rule.actions)">{{ rule.actions }}</span></span>
-                    <span>Triggered: <span class="text-yellow-400">{{ rule.triggeredCount || 0 }}x</span></span>
+                    <span>Triggered: <span class="text-yellow-400">{{ rule.triggered_count || 0 }}x</span></span>
                   </div>
                 </div>
               </div>
@@ -121,33 +121,48 @@
     </div>
 
     <!-- Rule History -->
-    <div class="card">
-      <h3 class="text-lg font-semibold text-white mb-4">📊 Lịch Sử Kích Hoạt</h3>
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead class="bg-slate-700">
-            <tr>
-              <th class="px-4 py-3 text-left text-slate-300">Thời gian</th>
-              <th class="px-4 py-3 text-left text-slate-300">Quy Tắc</th>
-              <th class="px-4 py-3 text-left text-slate-300">Src IP</th>
-              <th class="px-4 py-3 text-right text-slate-300">pktrate</th>
-              <th class="px-4 py-3 text-left text-slate-300">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="event in ruleHistory" :key="event.id" class="border-b border-slate-700 hover:bg-slate-700/50">
-              <td class="px-4 py-3 text-slate-400 text-xs">{{ formatTime(event.timestamp) }}</td>
-              <td class="px-4 py-3">{{ event.ruleName }}</td>
-              <td class="px-4 py-3 font-mono text-orange-400">{{ event.src_ip }}</td>
-              <td class="px-4 py-3 text-right">{{ event.pktrate }}</td>
-              <td class="px-4 py-3">
-                <span class="badge" :class="getActionBadge(event.action)">{{ event.action }}</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <!-- Rule History -->
+<div class="card">
+  <h3 class="text-lg font-semibold text-white mb-4 flex justify-between items-center">
+    📊 Lịch Sử Kích Hoạt
+    <button @click="fetchRuleHistory" class="text-sm text-slate-400 hover:text-white">
+      🔄 Làm mới
+    </button>
+  </h3>
+
+  <div v-if="historyLoading" class="text-center py-8 text-slate-400">
+    Đang tải lịch sử...
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-700">
+        <tr>
+          <th class="px-4 py-3 text-left text-slate-300">Thời gian</th>
+          <th class="px-4 py-3 text-left text-slate-300">Quy Tắc</th>
+          <th class="px-4 py-3 text-left text-slate-300">Src IP</th>
+          <th class="px-4 py-3 text-right text-slate-300">pktrate</th>
+          <th class="px-4 py-3 text-left text-slate-300">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="event in ruleHistory" :key="event.id" class="border-b border-slate-700 hover:bg-slate-700/50">
+          <td class="px-4 py-3 text-slate-400 text-xs">{{ formatTime(event.timestamp) }}</td>
+          <td class="px-4 py-3">{{ event.ruleName }}</td>
+          <td class="px-4 py-3 font-mono text-orange-400">{{ event.src_ip }}</td>
+          <td class="px-4 py-3 text-right font-mono">{{ event.pktrate }}</td>
+          <td class="px-4 py-3">
+            <span class="badge" :class="getActionBadge(event.action)">{{ event.action }}</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div v-if="!historyLoading && ruleHistory.length === 0" class="text-center py-8 text-slate-400">
+    Chưa có lịch sử kích hoạt nào.
+  </div>
+</div>
     <!-- Edit Rule Modal -->
 <div v-if="showEditModal" class="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
   <div class="bg-slate-800 rounded-xl p-6 w-full max-w-md mx-4">
@@ -216,7 +231,7 @@ import * as ruleApi from '../composables/rule'
 const rules = ref([])
 const ruleHistory = ref([])
 const loading = ref(false)
-
+const historyLoading = ref(false)
 // Modal edit
 const showEditModal = ref(false)
 const editingRule = ref(null)
@@ -263,6 +278,30 @@ const fetchRules = async () => {
   }
 }
 
+const fetchRuleHistory = async () => {
+  historyLoading.value = true
+  try {
+    const data = await ruleApi.getRuleHistory({ limit: 20, skip: 0 })
+    
+    // Map dữ liệu từ API về format phù hợp với bảng
+    ruleHistory.value = (data.history || []).map(item => ({
+      id: item.id,
+      timestamp: item.timestamp,
+      ruleName: item.rule_name || 'Unknown Rule',
+      src_ip: item.src_ip,
+      pktrate: item.pktrate?.toFixed(2) || item.pktrate,
+      action: item.action,
+      confidence: item.confidence,
+      protocol: item.flow_details?.protocol
+    }))
+  } catch (error) {
+    console.error('Lỗi khi lấy lịch sử:', error)
+    ruleHistory.value = []
+  } finally {
+    historyLoading.value = false
+  }
+}
+
 const addNewRule = async () => {
   if (!newRule.value.name) {
     alert('Vui lòng nhập tên quy tắc')
@@ -292,7 +331,7 @@ const editRule = (rule) => {
   editForm.value = {
     name: rule.name || '',
     description: rule.description || '',
-    pktrate_threshold: rule.conditions?.pktrate?.gt || 1000,
+    pktrate_threshold: rule.conditions?.pktrate_threshold || 1000,
     protocol: rule.conditions?.protocol || '',
     action: Array.isArray(rule.actions) ? rule.actions[0] : rule.actions || 'block'
   }
@@ -364,5 +403,6 @@ const getActionBadge = (action) => {
 
 onMounted(() => {
   fetchRules()
+  fetchRuleHistory()
 })
 </script>

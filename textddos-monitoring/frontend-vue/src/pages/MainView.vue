@@ -55,13 +55,13 @@
             </div>
             <div class="flex items-center space-x-4">
               <button class="relative p-2 text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition-colors">
-                <span class="text-xl">🔔</span>
+                <span class="text-xl"></span>
                 <span v-if="alertCount > 0" class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full">
                   {{ alertCount }}
                 </span>
               </button>
               <button class="p-2 text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition-colors">
-                <span class="text-xl">⚙️</span>
+                <span class="text-xl"></span>
               </button>
             </div>
           </div>
@@ -101,7 +101,7 @@ const currentPageTitle = computed(() => {
   return item?.label || 'Dashboard'
 })
 
-const alertCount = 12
+const alertCount = 0
 
 const handleLogout = () => {
   if (confirm('Bạn có chắc chắn muốn đăng xuất?')) {

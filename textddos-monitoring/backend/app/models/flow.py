@@ -52,25 +52,26 @@ class FlowModel(BaseModel):
             }
         }
 
-class AlertModel(BaseModel):
-    id: Optional[PyObjectId] = Field(default_factory=PyObjectId, alias="_id")
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+class AlertResponse(BaseModel):
+    id: Optional[str] = Field(None, alias="_id")
+    
     title: str
     description: str
-    severity: str  # critical, high, medium, low
-    status: str = "new"  # new, acknowledged, resolved
+    severity: str
     src_ip: str
-    dst_ip: Optional[str]
-    protocol: Optional[str]
     pktrate: float
     confidence: float
-    rule_triggered: Optional[str]
-    actions_taken: Optional[list] = []
+    timestamp: datetime
+    rule_id: Optional[str] = None
+    is_ai: bool = False
+    is_blocked: bool = False
 
-    class Config:
-        allow_population_by_field_name = True
-        arbitrary_types_allowed = True
-        json_encoders = {ObjectId: str}
+    model_config = ConfigDict(
+        populate_by_name=True,      # Cho phép dùng alias (_id -> id)
+        json_encoders={
+            ObjectId: str
+        }
+    )
 
 class RuleModel(BaseModel):
     id: Optional[PyObjectId] = Field(default_factory=PyObjectId, alias="_id")
@@ -83,6 +84,22 @@ class RuleModel(BaseModel):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     triggered_count: int = 0
     last_triggered: Optional[datetime]
+
+    class Config:
+        allow_population_by_field_name = True
+        arbitrary_types_allowed = True
+        json_encoders = {ObjectId: str}
+
+class RuleHistoryModel(BaseModel):
+    id: Optional[PyObjectId] = Field(default_factory=PyObjectId, alias="_id")
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    rule_id: str
+    rule_name: str
+    src_ip: str
+    pktrate: float
+    action: str  # ví dụ: "alert", "block_ip", "log"
+    confidence: Optional[float] = None
+    flow_details: Optional[Dict[str, Any]] = {}  # lưu thêm thông tin flow nếu cần
 
     class Config:
         allow_population_by_field_name = True

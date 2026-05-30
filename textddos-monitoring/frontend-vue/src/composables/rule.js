@@ -27,6 +27,6 @@ export const toggleRule = async (rule_id) => {
   return response.data;
 };
 export const getRuleHistory = async (rule_id, params) => {
-  const response = await axios.get(`${API_BASE_URL}/rules/history/${rule_id}`, { params });
+  const response = await axios.get(`${API_BASE_URL}/rules/all/history`, { params });
   return response.data;
 }

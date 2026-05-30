@@ -4,9 +4,18 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 from loguru import logger
+# Sửa thành:
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Load biến môi trường từ file .env
+load_dotenv()
 
 # ====================== CẤU HÌNH ======================
-MODEL_PATH = Path("D:\\AI-DDOS\\textddos-monitoring\\backend\\models\\")  # Thay bằng đường dẫn thực tế của bạn
+# MODEL_PATH = Path("D:\\AI-DDOS\\textddos-monitoring\\backend\\models")  # Thay bằng đường dẫn thực tế của bạn
+# Thay vì hardcode đường dẫn Windows
+MODEL_PATH = Path(os.getenv("MODEL_PATH"))  # "./models/random_forest_model.pkl"
 RF_MODEL_PATH = MODEL_PATH / "random_forest_model.pkl"
 SCALER_PATH = MODEL_PATH / "scaler_fs.pkl"   # hoặc scaler.pkl
 

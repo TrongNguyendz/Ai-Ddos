@@ -55,3 +55,5 @@ async def get_rules_collection():
 
 async def get_stats_collection():
     return await get_collection("stats")
+async def get_rule_history_collection():
+    return await get_collection("rule_history")
